@@ -34,12 +34,12 @@ var databases = [
 		url: 'https://geolite.maxmind.com/download/geoip/database/GeoLite2-Country-CSV.zip',
 		checksum: 'https://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.md5',
 		src: [
-			'GeoLite2-Country-Locations-en.csv',
+			'GeoLite2-Country-Locations-ru.csv',
 			'GeoLite2-Country-Blocks-IPv4.csv',
 			'GeoLite2-Country-Blocks-IPv6.csv'
 		],
 		dest: [
-			'',
+			'geoip-country-names.dat',
 			'geoip-country.dat',
 			'geoip-country6.dat'
 		]
@@ -49,7 +49,7 @@ var databases = [
 		url: 'https://geolite.maxmind.com/download/geoip/database/GeoLite2-City-CSV.zip',
 		checksum: 'https://geolite.maxmind.com/download/geoip/database/GeoLite2-City.md5',
 		src: [
-			'GeoLite2-City-Locations-en.csv',
+			'GeoLite2-City-Locations-ru.csv',
 			'GeoLite2-City-Blocks-IPv4.csv',
 			'GeoLite2-City-Blocks-IPv6.csv'
 		],
@@ -77,7 +77,7 @@ function try_fixing_line(line) {
 	var pos2 = -1;
 	// escape quotes
 	line = line.replace(/""/,'\\"').replace(/'/g,"\\'");
-	
+
 	while(pos1 < line.length && pos2 < line.length) {
 		pos1 = pos2;
 		pos2 = line.indexOf(',', pos1 + 1);
@@ -141,36 +141,36 @@ function check(database, cb) {
 		//so not even using checksums
 		return cb(null, database);
 	}
-    
+
 	var checksumUrl = database.checksum;
-    
+
 	if (typeof checksumUrl === "undefined") {
 		//no checksum url to check, skipping
 		return cb(null, database);
 	}
-    
+
 	//read existing checksum file
 	fs.readFile(path.join(dataPath, database.type+".checksum"), function(err, data) {
 		if (!err && data && data.length) {
 			database.checkValue = data;
 		}
-        
+
 		console.log('Checking ', checksumUrl);
-        
+
 		function onResponse(response) {
 			var status = response.statusCode;
-    
+
 			if (status !== 200) {
 				console.log('ERROR'.red + ': HTTP Request Failed [%d %s]', status, http.STATUS_CODES[status]);
 				client.abort();
 				process.exit();
 			}
-    
+
 			var str = "";
 			response.on("data", function (chunk) {
 				str += chunk;
 			});
-            
+
 			response.on("end", function () {
 				if (str && str.length) {
 					if (str == database.checkValue) {
@@ -191,13 +191,13 @@ function check(database, cb) {
 				cb(null, database);
 			});
 		}
-        
+
 		var client = https.get(getHTTPOptions(checksumUrl), onResponse);
 	});
 }
 
 function fetch(database, cb) {
-    
+
 	if (database.skip) {
 		return cb(null, null, null, database);
 	}
@@ -253,7 +253,7 @@ function extract(tmpFile, tmpFileName, database, cb) {
 	if (database.skip) {
 		return cb(null, database);
 	}
-    
+
 	if (path.extname(tmpFileName) !== '.zip') {
 		cb(null, database);
 	} else {
@@ -280,7 +280,7 @@ function extract(tmpFile, tmpFileName, database, cb) {
 						});
 						var filePath = entry.fileName.split("/");
 						// filePath will always have length >= 1, as split() always returns an array of at least one string
-						var fileName = filePath[filePath.length - 1]; 
+						var fileName = filePath[filePath.length - 1];
 						readStream.pipe(fs.createWriteStream(path.join(tmpPath, fileName)));
 					});
 				}
@@ -344,12 +344,12 @@ function processCountryData(src, dest, cb) {
 				rngip = new Address6(fields[0]);
 				sip = utils.aton6(rngip.startAddress().correctForm());
 				eip = utils.aton6(rngip.endAddress().correctForm());
-	
+
 				b = Buffer.alloc(bsz);
 				for (i = 0; i < sip.length; i++) {
 					b.writeUInt32BE(sip[i], i * 4);
 				}
-	
+
 				for (i = 0; i < eip.length; i++) {
 					b.writeUInt32BE(eip[i], 16 + (i * 4));
 				}
@@ -360,15 +360,15 @@ function processCountryData(src, dest, cb) {
 				rngip = new Address4(fields[0]);
 				sip = parseInt(rngip.startAddress().bigInteger(),10);
 				eip = parseInt(rngip.endAddress().bigInteger(),10);
-	
+
 				b = Buffer.alloc(bsz);
 				b.fill(0);
 				b.writeUInt32BE(sip, 0);
 				b.writeUInt32BE(eip, 4);
 			}
-	
+
 			b.write(cc, bsz - 2);
-	
+
 			fs.writeSync(datFile, b, 0, bsz, null);
 			if(Date.now() - tstart > 5000) {
 				tstart = Date.now();
@@ -449,7 +449,7 @@ function processCityData(src, dest, cb) {
 				offset += 4;
 			}
 			b.writeUInt32BE(locId>>>0, 32);
-			
+
 			lat = Math.round(parseFloat(fields[7]) * 10000);
 			lon = Math.round(parseFloat(fields[8]) * 10000);
 			area = parseInt(fields[9], 10);
@@ -521,7 +521,7 @@ function processCityDataNames(src, dest, cb) {
 			console.log("weird line: %s::", line);
 			return;
 		}
-		
+
 		locId = parseInt(fields[0]);
 
 		cityLookup[locId] = linesCount;
@@ -570,7 +570,7 @@ function processData(database, cb) {
 	if (database.skip) {
 		return cb(null, database);
 	}
-    
+
 	var type = database.type;
 	var src = database.src;
 	var dest = database.dest;
